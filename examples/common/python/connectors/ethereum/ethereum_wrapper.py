@@ -13,16 +13,15 @@
 # limitations under the License.
 
 import logging
-import os,sys
+import os
 from os.path import exists, realpath
-import json
-from eth_utils.hexadecimal import is_hex
 from connectors.utils import construct_message
 
 from solc import compile_source
 from web3 import HTTPProvider, Web3
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+
 
 class EthereumWrapper():
     """
@@ -71,7 +70,7 @@ class EthereumWrapper():
             logging.error("Missing parameter gas price")
             return False
         return True
-    
+
     def compile_source_file(self, file_path):
         """
         Compile solidity contract file and returns contract instance object

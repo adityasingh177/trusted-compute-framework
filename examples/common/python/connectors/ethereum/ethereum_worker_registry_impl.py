@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import binascii
-import json
 import logging
 from os import environ
-from os.path import exists, realpath
 
-from eth_utils.hexadecimal import is_hex
+from utility.hex_utils import is_valid_hex_str
 
 from utility.tcf_types import WorkerStatus, WorkerType
 from connectors.ethereum.ethereum_wrapper import EthereumWrapper
@@ -26,6 +24,7 @@ from connectors.interfaces.worker_registry_interface import WorkerRegistryInterf
 from connectors.utils import construct_message, validate_details
 
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+
 
 class EthereumWorkerRegistryImpl(WorkerRegistryInterface):
     """
@@ -43,47 +42,45 @@ class EthereumWorkerRegistryImpl(WorkerRegistryInterface):
         """
         Registry new worker with details of worker
         """
-        if (self.__contract_instance != None):
-            if not is_hex(binascii.hexlify(worker_id).decode("utf8")):
+        if (self.__contract_instance is not None):
+            if not is_valid_hex_str(binascii.hexlify(worker_id).decode("utf8")):
                 logging.info("Invalid worker id {}".format(worker_id))
                 return construct_message("failed", "Invalid worker id {}".format(worker_id))
             if not isinstance(worker_type, WorkerType):
                 logging.info("Invalid workerType {}".format(worker_type))
                 return construct_message("failed", "Invalid workerType {}".format(worker_type))
-            if not is_hex(binascii.hexlify(org_id).decode("utf8")):
+            if not is_valid_hex_str(binascii.hexlify(org_id).decode("utf8")):
                 logging.info("Invalid organization id {}".format(org_id))
                 return construct_message("failed", "Invalid organization id {}".format(org_id))
             for aid in application_ids:
-                if not is_hex(binascii.hexlify(aid).decode("utf8")):
+                if not is_valid_hex_str(binascii.hexlify(aid).decode("utf8")):
                     logging.info("Invalid application id {}".format(aid))
                     return construct_message("failed", "Invalid application id {}".format(aid))
             if details is not None:
                 is_valid = validate_details(details)
                 if is_valid is not None:
-                     return construct_message("failed", is_valid)
+                    return construct_message("failed", is_valid)
 
-            txn_hash = self.__contract_instance.functions.workerRegister(worker_id, 
-                worker_type.value, org_id, application_ids, details).buildTransaction(
-            {
-                "chainId": self.__eth_client.get_channel_id(),
+            txn_hash = self.__contract_instance.functions.workerRegister(
+                worker_id, worker_type.value, org_id, application_ids,
+                details).buildTransaction(
+                {"chainId": self.__eth_client.get_channel_id(),
                 "gas": self.__eth_client.get_gas_limit(),
                 "gasPrice": self.__eth_client.get_gas_price(),
-                "nonce": self.__eth_client.get_txn_nonce()
-            })
+                "nonce": self.__eth_client.get_txn_nonce()})
             tx = self.__eth_client.execute_transaction(txn_hash)
             return tx
         else:
             logging.error("worker registry contract instance is not initialized")
             return construct_message("failed", "worker registry contract instance is not initialized")
 
-
     def worker_set_status(self, worker_id, status):
         """
         Set the registry status identified by worker id
         status is worker type enum type
         """
-        if (self.__contract_instance != None):
-            if not is_hex(binascii.hexlify(worker_id).decode("utf8")):
+        if (self.__contract_instance is not None):
+            if not is_valid_hex_str(binascii.hexlify(worker_id).decode("utf8")):
                 logging.info("Invalid worker id {}".format(worker_id))
                 return construct_message("failed", "Invalid worker id {}".format(worker_id))
             if not isinstance(status, WorkerStatus):
@@ -107,8 +104,8 @@ class EthereumWorkerRegistryImpl(WorkerRegistryInterface):
         """
         Update the worker with details data which is json string
         """
-        if (self.__contract_instance != None):
-            if not is_hex(binascii.hexlify(worker_id).decode("utf8")):
+        if (self.__contract_instance is not None):
+            if not is_valid_hex_str(binascii.hexlify(worker_id).decode("utf8")):
                 logging.error("Invalid worker id {}".format(worker_id))
                 return construct_message("failed", "Invalid worker id {}".format(worker_id))
             if details is not None:
@@ -129,21 +126,21 @@ class EthereumWorkerRegistryImpl(WorkerRegistryInterface):
         else:
             logging.error("worker registry contract instance is not initialized")
             return construct_message("failed", "worker registry contract instance is not initialized")
-    
+
     def worker_lookup(self, worker_type, org_id, application_id):
         """
         Lookup a worker identified worker_type, org_id and application_id
         all fields are optional and if present condition should match for all
         fields. If none passed it should return all workers.
         """
-        if (self.__contract_instance != None):
+        if (self.__contract_instance is not None):
             if not isinstance(worker_type, WorkerType):
                 logging.info("Invalid workerType {}".format(worker_type))
                 return construct_message("failed", "Invalid workerType {}".format(worker_type))
-            if not is_hex(binascii.hexlify(org_id).decode("utf8")):
+            if not is_valid_hex_str(binascii.hexlify(org_id).decode("utf8")):
                 logging.info("Invalid organization id {}".format(org_id))
                 return construct_message("failed", "Invalid organization id {}".format(org_id))
-            if not is_hex(binascii.hexlify(application_id).decode("utf8")):
+            if not is_valid_hex_str(binascii.hexlify(application_id).decode("utf8")):
                 logging.info("Invalid application id {}".format(application_id))
                 return construct_message("failed", "Invalid application id {}".format(application_id))
             lookupResult = self.__contract_instance.functions.workerLookUp(worker_type.value,
@@ -157,8 +154,8 @@ class EthereumWorkerRegistryImpl(WorkerRegistryInterface):
         """
         Retrieve the worker identified by worker id
         """
-        if (self.__contract_instance != None):
-            if not is_hex(binascii.hexlify(worker_id).decode("utf8")):
+        if (self.__contract_instance is not None):
+            if not is_valid_hex_str(binascii.hexlify(worker_id).decode("utf8")):
                 logging.info("Invalid worker id {}".format(worker_id))
                 return construct_message("failed", "Invalid worker id {}".format(worker_id))
 
@@ -169,14 +166,14 @@ class EthereumWorkerRegistryImpl(WorkerRegistryInterface):
             return construct_message("failed", "worker registry contract instance is not initialized")
 
     def worker_lookup_next(self, worker_type, org_id, application_id, lookup_tag):
-        if (self.__contract_instance != None):
+        if (self.__contract_instance is not None):
             if not isinstance(worker_type, WorkerType):
                 logging.info("Invalid workerType {}".format(worker_type))
                 return construct_message("failed", "Invalid workerType {}".format(worker_type))
-            if not is_hex(binascii.hexlify(org_id).decode("utf")):
+            if not is_valid_hex_str(binascii.hexlify(org_id).decode("utf")):
                 logging.info("Invalid organization id {}".format(org_id))
                 return construct_message("failed", "Invalid organization id {}".format(org_id))
-            if not is_hex(binascii.hexlify(application_id).decode("utf8")):
+            if not is_valid_hex_str(binascii.hexlify(application_id).decode("utf8")):
                 logging.info("Invalid application id {}".format(org_id))
                 return construct_message("failed", "Invalid application id {}".format(org_id))
             lookupResult = self.__contract_instance.functions.workerLookUpNext(worker_type.value,

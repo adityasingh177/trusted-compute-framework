@@ -31,6 +31,8 @@ pipeline {
     environment {
         ISOLATION_ID = sh(returnStdout: true,
                           script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
+        COMPOSE_PROJECT_NAME = sh(returnStdout: true,
+                          script: 'printf $BUILD_TAG | sha256sum | cut -c1-64').trim()
     }
 
     stages {
@@ -61,15 +63,13 @@ pipeline {
 
         stage('Build TCF') {
             steps {
-                sh 'docker-compose -f ci/docker-compose-build.yaml up'
-                sh 'docker-compose -f ci/docker-compose-build.yaml down'
+                sh 'docker-compose -f ci/docker-compose-build.yaml build'
             }
         }
 
         stage('Run TCF Tests') {
             steps {
-                sh 'docker-compose -f ci/docker-compose-tests.yaml up'
-                sh 'docker-compose -f ci/docker-compose-tests.yaml down'
+                sh 'INSTALL_TYPE="" ./bin/run_tests'
             }
         }
 
@@ -86,10 +86,6 @@ pipeline {
     }
 
     post {
-        always {
-            sh 'docker-compose -f ci/docker-compose-build.yaml down'
-            sh 'docker-compose -f ci/docker-compose-tests.yaml down'
-        }
         success {
             archiveArtifacts '*.tgz, *.zip'
         }

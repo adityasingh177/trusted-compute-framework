@@ -3,11 +3,11 @@ Licensed under Creative Commons Attribution 4.0 International License
 https://creativecommons.org/licenses/by/4.0/
 -->
 
-# Trusted Compute Framework Prerequisites
+# Hyperledger Avalon Prerequisites
 
-Trusted Compute Framework (TCF) depends on several freely available
+Hyperledger Avalon depends on several freely available
 software components. These must be installed and configured before
-compiling TCF.
+compiling Avalon.
 This document describes how to get and compile these required components.
 
 
@@ -22,26 +22,17 @@ This document describes how to get and compile these required components.
 
 
 # Recommended host system
-The recommended host-system configuration for Trusted Compute Framework is to
-separate the Trusted Compute Framework components from the Sawtooth components.
-This means (at least) two different physical systems if using
-Intel&reg; SGX-enabled hardware.
-If running in Intel SGX simulation mode, this could be two virtual machines or
-containers.
+Hyperledger Avalon services (specifically the enclave manager and
+listener) should be ran on Ubuntu 18.04. Avalon has been tested on Ubuntu 18.04.
 
-Sawtooth (and the TCF transaction processors for Sawtooth) should be run on
-Ubuntu 18.04.
-Trusted Compute Framework services (specifically the enclave manager and
-listener) should be ran on Ubuntu 18.04. TCF has been tested on Ubuntu 18.04.
-
-Sawtooth and TCF may run on other Linux distributions, but the installation
+Avalon may run on other Linux distributions, but the installation
 process is likely to be more complicated, and the use of other distributions is
 not supported by their respective communities at this time.
 
 
 # <a name="environment"></a>Environment Variables
 Summary of all environment variables required to build
-Trusted Compute Framework.
+Hyperledger Avalon.
 Follow the instructions in the remainder of this document to install
 and configure these components.
 
@@ -69,40 +60,46 @@ Default directory is `/opt/intel/sgxssl`
 Use only with `SGX_MODE=HW`.
 This needs to be set to a valid enclave signing key. You can generate one
 yourself using OpenSSL, then export the path to it:
-  ```
+  ```bash
   openssl genrsa -3 -out $TCF_HOME/enclave.pem 3072
   export TCF_ENCLAVE_CODE_SIGN_PEM=$TCF_HOME/enclave.pem
   ```
 
 - `TCF_HOME`
-Used to locate the top level TCF build directory.
+Used to locate the top level Avalon build directory.
 It is described in the [BUILD document](BUILD.md#buildtcf)
 
 - `TCF_DEBUG_BUILD`
-Optional variable for enabling TCF debug output. Set to `1` enable.
+Optional variable for enabling Avalon debug output. Set to `1` enable.
 For example: `export TCF_DEBUG_BUILD=1` for standalone builds
 or`TCF_DEBUG_BUILD=1 docker-compose up` for Docker-based builds
 
 
 # <a name="packages"></a>Required Packages
-On a minimal Ubuntu system, the following packages are required. Other
-distributions will require similar packages.
-```
+On a minimal Ubuntu system, Hyperledger Avalon requires the following packages.
+Other distributions will require similar packages.
+```bash
 sudo apt-get update
 sudo apt-get install -y cmake swig pkg-config python3-dev python3-venv python \
      software-properties-common virtualenv curl xxd git unzip dh-autoreconf \
-     ocaml ocamlbuild liblmdb-dev protobuf-compiler
+     ocaml ocamlbuild liblmdb-dev protobuf-compiler python3-pip python3-toml \
+     python3-requests python3-colorlog python3-twisted
 ```
 
+Also, install the following pip packages
+```bash
+sudo pip3 install --upgrade setuptools json-rpc py-solc web3 wheel
+```
 
 # <a name="docker"></a>Docker
-Docker may be used instead of building TCF directly (standalone mode) and
-is recommended. If you build using Docker, you need to install Docker Engine
+Docker may be used instead of building Hyperledger Avalon directly
+(standalone mode) and is recommended.
+If you build using Docker, you need to install Docker Engine
 and Docker Compose if it is not already installed.
 
 To install Docker CE Engine:
 
-```
+```bash
 sudo apt-get install -y apt-transport-https ca-certificates
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 sudo add-apt-repository \
@@ -114,7 +111,7 @@ sudo apt-get install -y docker-ce
 To verify a correct installation, run `sudo docker run hello-world`
 
 To install Docker Compose:
-```
+```bash
 sudo curl -L \
    https://github.com/docker/compose/releases/download/1.24.1/docker-compose-`uname -s`-`uname -m` \
    -o /usr/local/bin/docker-compose
@@ -130,7 +127,7 @@ https://docs.docker.com/compose/install/#install-compose
 
 
 # <a name="sgx"></a>Intel&reg; Software Guard Extensions (Intel SGX)
-Hyperledger Trusted Compute Framework is intended to be run on
+Hyperledger Avalon is intended to be run on
 Intel SGX-enabled platforms. However, it can also be run in "simulator mode"
 on platforms that do not have hardware support for Intel SGX.
 Support for other hardware-based Trusted Execution Environments (TEEs)
@@ -143,7 +140,7 @@ Intel SGX simulator mode.
 The following instructions download the Intel SGX SDK 2.3 and installs it in
 `/opt/intel/sgxsdk/` :
 
-```
+```bash
 sudo mkdir -p /opt/intel
 cd /opt/intel
 sudo wget https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/sgx_linux_x64_sdk_2.3.101.46683.bin
@@ -157,7 +154,7 @@ The Intel SGX OpenSSL library expects the SDK to be here by default.
 After installing, source the Intel SGX SDK activation script to set
 `$SGX_SDK`, `$PATH`, `$PKG_CONFIG_PATH`, and `$LD_LIBRARY_PATH`.
 Append this line to your login shell script (`~/.bashrc` or similar):
-```
+```bash
 source /opt/intel/sgxsdk/environment
 echo "source /opt/intel/sgxsdk/environment" >>~/.bashrc
 ```
@@ -171,32 +168,55 @@ Downloads are listed at
 
 ## Intel SGX in Hardware Mode
 
-If you plan to run this on Intel SGX-enabled hardware, you will need
-to install packages `libsgx-enclave-common` and `libelf-dev` and
-install the Intel SGX driver for both standalone and docker builds.
-You need to install the Intel SGX driver whether you build TCF standalone
+If you plan to run this on Intel SGX-enabled hardware, you will need to
+install the Intel SGX driver and install additional packages
+for both standalone and docker builds.
+You need to install the Intel SGX driver whether you build Avalon standalone
 or using Docker.
 
-First install this package:
-
-```
-sudo apt-get install -y libelf-dev
+Before installing Intel SGX software, install these packages:
+```bash
+sudo apt-get install -y libelf-dev cpuid
 ````
 
+Verify your processor supports Intel SGX with:
+`cpuid | grep SGX:`
+
+Verify Intel SGX is enabled in BIOS.
+Enter BIOS by pressing the BIOS key during boot.
+The BIOS key varies by manufacturer and could be F10, F2, F12, F1, DEL, or ESC.
+Usually Intel SGX is disabled by default.
+If disabled, enter BIOS and find the Intel SGX feature
+(it is usually under the "Advanced" or "Security" menu),
+enable Intel SGX, save your BIOS settings, and exit BIOS.
+
 Download and install libsgx-enclave-common version 2.3.101:
-```
+```bash
 wget https://download.01.org/intel-sgx/linux-2.3.1/ubuntu18.04/libsgx-enclave-common_2.3.101.46683-1_amd64.deb
 sudo dpkg -i libsgx-enclave-common_2.3.101.46683-1_amd64.deb
 ```
 
-### Remove Old `/dev/sgx` Intel SGX Driver
-If device file `/dev/sgx` is present, remove the old driver:
+### Run aesm service on host machine
+If you are behind a corporate proxy,
+uncomment and update the proxy type and aesm proxy lines in /etc/aesmd.conf:  
 ```
+proxy type = manual
+aesm proxy = http://your-proxy:your-port
+```
+
+Start aesm service on host machine  
+```
+sudo source /opt/intel/libsgx-enclave-common/aesm/aesm_service
+```
+
+### Remove Old `/dev/sgx` Intel SGX DCAP Driver
+If device file `/dev/sgx` is present, remove the old DCAP driver:
+```bash
 sudo /opt/intel/sgxdriver/uninstall.sh
 ```
 
 If the `uninstall.sh` script is missing or fails, uninstall as follows:
-```
+```bash
 if [ -c /dev/sgx ] ; then
     sudo service aesmd stop
     sudo rm -f $(find /lib/modules -name intel_sgx.ko)
@@ -209,10 +229,10 @@ fi
 
 After uninstalling, reboot with `sudo shutdown -r 0`
 
-### Install New `/dev/isgx` Intel SGX Driver
-Install the Intel SGX driver:
+### Install New `/dev/isgx` Intel SGX IAS Driver
+Install the Intel SGX IAS driver:
 
-```
+```bash
 cd /var/tmp
 wget https://download.01.org/intel-sgx/linux-2.6/ubuntu18.04-server/sgx_linux_x64_driver_2.5.0_2605efa.bin
 sudo bash ./sgx_linux_x64_driver_2.5.0_2605efa.bin
@@ -230,7 +250,7 @@ Replace the SPID and IAS Subscription key values in file
 `$TCF_HOME/config/tcs_config.toml` with the actual hexadecimal values
 (the IAS key may be either your Primary key or Secondary key):
 
-```
+```bash
 spid = '<spid obtained from portal>'
 ias_api_key = '<ias subscription key obtained from portal>'
 ```
@@ -238,7 +258,7 @@ ias_api_key = '<ias subscription key obtained from portal>'
 In the same file, if you are behind a corporate proxy,
 uncomment and update the https_proxy line:
 
-```
+```bash
 #https_proxy = "http://your-proxy:your-port/"
 ```
 If you are not behind a corporate proxy (the usual case),
@@ -254,7 +274,7 @@ They are normally set by sourcing the Intel SGX SDK activation script
 Set `SGX_MODE` as follows.
 Append this line to your login shell script (`~/.bashrc` or similar):
 
-```
+```bash
 export SGX_MODE=HW
 echo "export SGX_MODE=HW" >>~/.bashrc
 ```
@@ -285,12 +305,12 @@ Check for available versions
 [here](http://http.us.debian.org/debian/pool/main/o/openssl/).
 For example, to install OpenSSL v1.1.1d on an Ubuntu system:
 
-```
+```bash
 cd /var/tmp
-wget 'http://http.us.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1d-1_amd64.deb'
-wget 'http://http.us.debian.org/debian/pool/main/o/openssl/libssl-dev_1.1.1d-1_amd64.deb'
-sudo dpkg -i libssl1.1_1.1.1d-1_amd64.deb
-sudo dpkg -i libssl-dev_1.1.1d-1_amd64.deb
+wget 'http://http.us.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1d-2_amd64.deb'
+wget 'http://http.us.debian.org/debian/pool/main/o/openssl/libssl-dev_1.1.1d-2_amd64.deb'
+sudo dpkg -i libssl1.1_1.1.1d-2_amd64.deb
+sudo dpkg -i libssl-dev_1.1.1d-2_amd64.deb
 sudo apt-get install -f
 ```
 
@@ -302,7 +322,7 @@ you can build OpenSSL from source using the following commands. If you
 installed the package directly as described above you do *not* need to do this.
 These steps detail installing OpenSSL to the `~/openssl/install` directory.
 
-```
+```bash
 mkdir -p ~/openssl/install
 cd ~/openssl
 wget https://www.openssl.org/source/openssl-1.1.1d.tar.gz
@@ -318,13 +338,13 @@ cd ../..
 
 If the above succeeds, define/extend the `PKG_CONFIG_PATH` environment variable
 accordingly, e.g.,
-```
+```bash
 export PKG_CONFIG_PATH="$PWD/install/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 ```
 If you installed in a standard location (e.g., default `/usr/local/lib`),
 run `ldconfig` .
 If you installed in a non-standard location, extend `LD_LIBRARY_PATH`, e.g.,
-```
+```bash
 export LD_LIBRARY_PATH="$PWD/install/lib/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 ```
 
@@ -345,26 +365,26 @@ specifically for Intel SGX OpenSSL with fixes for commonly encountered
 problems.
 - Ensure you have the Intel SGX SDK environment variables activated for the
   current shell session
-  ```
+  ```bash
   source /opt/intel/sgxsdk/environment
   ```
 
 - Create a new directory to build the sgxssl components
-  ```
+  ```bash
   mkdir ~/sgxssl
   cd ~/sgxssl
   ```
 
 - Download the latest SGX SSL git repository for your version of OpenSSL:
 
-  ```
+  ```bash
   git clone 'https://github.com/intel/intel-sgx-ssl.git'
   ```
 
 - Download the OpenSSL source package for your version of OpenSSL.
   This will form the base of this Intel SGX SSL install:
 
-  ```
+  ```bash
   cd intel-sgx-ssl/openssl_source
   wget 'https://www.openssl.org/source/openssl-1.1.1d.tar.gz'
   cd ..
@@ -372,7 +392,7 @@ problems.
 
 - Compile and install the sgxssl project.
   Environment variable `SGX_MODE` must be set to `SIM` or `HW` .
-  ```
+  ```bash
   cd Linux
   make DESTDIR=/opt/intel/sgxssl all test
   sudo make install
@@ -384,7 +404,7 @@ problems.
   find and link this library.
   Append this line to your login shell script (`~/.bashrc` or similar)
   after changing the directory name:
-  ```
+  ```bash
   export SGX_SSL=/opt/intel/sgxssl
   echo "export SGX_SSL=/opt/intel/sgxssl" >>~/.bashrc
   ```
@@ -392,24 +412,26 @@ problems.
 # <a name="troubleshooting"></a>Troubleshooting Installation
 - Verify your [environment variables](#environment) are set correctly and the
   paths exist
+
 - If you get the error:
   `./test_app/TestApp: error while loading shared libraries: libprotobuf.so.9:
    cannot open shared object file: No such file or directory`
   you may not have libprotobuf installed. You can install it via:
-  ```
+  ```bash
   sudo apt-get update
   sudo apt-get install -y libprotobuf-dev
   ```
 - If you still get the above error about libprotobuf.so.9, your distribution
   may not include the .so.9 version of libprotobuf. You can work around this
   by simply creating a symbolic link to the current version like:
-  ```
+  ```bash
   cd /usr/lib/x86_64-linux-gnu/
   sudo ln -s libprotobuf.so.10 libprotobuf.so.9
   ```
 - If you installed libprotobuf in a standard location (e.g., `/usr/local/lib`),
   run `ldconfig` .
   If you installed libprotobuf elsewhere, add the directory to `LD_LIBRARY_PATH`
+
 - If you get the error:
   `crypto/rand/rand_lib.c:14:10: fatal error: internal/rand_int.h:
    No such file or directory`
@@ -420,6 +442,9 @@ problems.
   `rand_lib.c:151:16: error: too many arguments to function 'rand_pool_new'`
   you are using an old version of OpenSSL and need to clone the
   `openssl_1.1.1` branch of `intel-sgx-ssl` in the step above
+
+- If the message  `intel_sgx: SGX is not enabled` appears in `/var/log/syslog`
+  Intel SGX needs to be enabled in BIOS
 
 - If you get the error
   `failed to initialize enclave; . . . ('Cannot connect to proxy.', . . .)`

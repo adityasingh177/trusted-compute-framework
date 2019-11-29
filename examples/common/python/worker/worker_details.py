@@ -13,13 +13,15 @@
 # limitations under the License.
 
 """
-Worker.py -- functions to perform worker related functions based on Spec 1.0 compatibility  
+Worker.py -- functions to perform worker related functions based on Spec 1.0 compatibility
 
 """
 
 import logging
 import json
 import utility.utility as utility
+import utility.file_utils as futils
+import config.config as pconfig
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +31,11 @@ class WorkerDetails():
     """
     def __init__(self):
         """
-        Function to set the member variables of this class with default value as per TCf Spec
+        Function to set the member variables of this class with default
+        value as per TCf Spec.
         """
-        tcs_worker = utility.read_toml_file("tcs_config.toml","WorkerConfig")
+        tcs_worker = pconfig.read_config_from_toml("tcs_config.toml",
+            "WorkerConfig")
         self.work_order_sync_uri = ""
         self.work_order_async_uri = ""
         self.work_order_pull_uri = ""
@@ -45,8 +49,6 @@ class WorkerDetails():
         self.key_encryption_algorithm = tcs_worker['KeyEncryptionAlgorithm']
         self.data_encryption_algorithm = tcs_worker['DataEncryptionAlgorithm']
         self.work_order_payload_formats = []
-
-
 
 
 class SGXWorkerDetails(WorkerDetails):
@@ -65,12 +67,12 @@ class SGXWorkerDetails(WorkerDetails):
         self.enclave_certificate = ""
         self.worker_id = ""
 
-#-----------------------------------------------------------------------------------------------
-    def load_worker(self,input_str):
+# -----------------------------------------------------------------------------
+    def load_worker(self, input_str):
         """
         Function to load the member variables of this class based on worker retrieved details
         """
-        worker_data = input_str ['result']['details']
+        worker_data = input_str['result']['details']
         logger.info("*********Updating Worker Details*********")
         self.hashing_algorithm = worker_data['hashingAlgorithm']
         self.signing_algorithm = worker_data['signingAlgorithm']
@@ -78,7 +80,7 @@ class SGXWorkerDetails(WorkerDetails):
         self.data_encryption_algorithm = worker_data['dataEncryptionAlgorithm']
         self.verification_key = worker_data['workerTypeData']['verificationKey']
         self.encryption_key = worker_data['workerTypeData']['encryptionKey']
-        if worker_data['workerTypeData']['proofData']:
+        if 'proofData' in worker_data['workerTypeData'] and worker_data['workerTypeData']['proofData']:
             # proofData will be initialized only in HW mode by tcf_enclave_bridge
             # module when signup info is obtained from worker.
             self.proof_data = json.loads(worker_data['workerTypeData']['proofData'])
@@ -90,4 +92,4 @@ class SGXWorkerDetails(WorkerDetails):
         logger.info("Hashing Algorithm : %s", self.hashing_algorithm)
         logger.info("Signing Algorithm : %s", self.signing_algorithm)
 
-#-----------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
